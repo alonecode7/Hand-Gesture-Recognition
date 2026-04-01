@@ -5,6 +5,15 @@ from typing import Dict, List, Tuple
 import cv2
 import mediapipe as mp
 
+# MediaPipe compatibility: some newer releases may not expose `mp.solutions`
+# at top-level in every environment.
+try:
+    MP_HANDS = mp.solutions.hands
+    MP_DRAWING = mp.solutions.drawing_utils
+except AttributeError:
+    from mediapipe.python.solutions import drawing_utils as MP_DRAWING
+    from mediapipe.python.solutions import hands as MP_HANDS
+
 
 @dataclass
 class HandState:
@@ -32,24 +41,20 @@ class HandGestureRecognizer:
     }
 
     def __init__(self) -> None:
-        self.mp_hands = mp.solutions.hands
+        self.mp_hands = MP_HANDS
         self.hands = self.mp_hands.Hands(
             static_image_mode=False,
             max_num_hands=2,
             min_detection_confidence=0.6,
             min_tracking_confidence=0.6,
         )
-        self.mp_draw = mp.solutions.drawing_utils
+        self.mp_draw = MP_DRAWING
 
     @staticmethod
     def _distance(a: Tuple[float, float], b: Tuple[float, float]) -> float:
         return math.hypot(a[0] - b[0], a[1] - b[1])
 
-    def _finger_states(
-        self,
-        landmarks: List[mp.framework.formats.landmark_pb2.NormalizedLandmark],
-        handedness: str,
-    ) -> Dict[str, bool]:
+    def _finger_states(self, landmarks, handedness: str) -> Dict[str, bool]:
         """Return open/closed state for each finger."""
         states: Dict[str, bool] = {}
 
@@ -69,11 +74,7 @@ class HandGestureRecognizer:
 
         return states
 
-    def _detect_gesture(
-        self,
-        states: Dict[str, bool],
-        landmarks: List[mp.framework.formats.landmark_pb2.NormalizedLandmark],
-    ) -> str:
+    def _detect_gesture(self, states: Dict[str, bool], landmarks) -> str:
         open_count = sum(states.values())
 
         if open_count == 0:
@@ -119,10 +120,7 @@ class HandGestureRecognizer:
 
         return "UNKNOWN"
 
-    def recognize(
-        self,
-        frame_bgr,
-    ) -> Tuple:
+    def recognize(self, frame_bgr) -> Tuple:
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
         result = self.hands.process(frame_rgb)
 
