@@ -16,11 +16,17 @@ This project contains a Python app that performs **real-time hand gesture recogn
 
 ## Setup
 ```bash
-python -m venv .venv # create virtual environment with python version less than 3.12
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned  # On Windows PowerShell to allow activating venv
+python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\\Scripts\\activate
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+## Model file (required)
+Download the Hand Landmarker model and save it as `hand_landmarker.task` in the same folder as `app.py`.
+
+Official MediaPipe docs (Python):
+- https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/python
 
 ## Run
 ```bash
