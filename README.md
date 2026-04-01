@@ -16,7 +16,8 @@ This project contains a Python app that performs **real-time hand gesture recogn
 
 ## Setup
 ```bash
-python -m venv .venv
+python -m venv .venv # create virtual environment with python version less than 3.12
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned  # On Windows PowerShell to allow activating venv
 source .venv/bin/activate  # On Windows: .venv\\Scripts\\activate
 pip install -r requirements.txt
 ```
