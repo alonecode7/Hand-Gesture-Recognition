@@ -1,6 +1,7 @@
 import math
+from collections import Counter, deque
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Deque, Dict, List, Tuple
 
 import cv2
 import mediapipe as mp
@@ -42,6 +43,7 @@ class HandGestureRecognizer:
             min_tracking_confidence=0.5,
         )
         self.landmarker = vision.HandLandmarker.create_from_options(options)
+        self.label_history: Dict[str, Deque[str]] = {}
 
     @staticmethod
     def _distance(a: Tuple[float, float], b: Tuple[float, float]) -> float:
@@ -53,7 +55,7 @@ class HandGestureRecognizer:
         for finger in ["index", "middle", "ring", "pinky"]:
             tip = landmarks[self.FINGER_TIPS[finger]]
             pip = landmarks[self.FINGER_PIPS[finger]]
-            states[finger] = tip.y < pip.y
+            states[finger] = tip.y < (pip.y - 0.02)
 
         thumb_tip = landmarks[self.FINGER_TIPS["thumb"]]
         thumb_ip = landmarks[self.FINGER_PIPS["thumb"]]
@@ -66,19 +68,20 @@ class HandGestureRecognizer:
 
     def _detect_gesture(self, states: Dict[str, bool], landmarks) -> str:
         open_count = sum(states.values())
+        non_thumb_closed = (not states["index"] and not states["middle"] and not states["ring"] and not states["pinky"])
 
-        if open_count == 0:
+        if non_thumb_closed:
+            if states["thumb"]:
+                return "THUMBS UP / SIDE"
             return "FIST"
-        if open_count == 5:
+
+        if open_count >= 4 and states["index"] and states["middle"] and states["ring"]:
             return "OPEN PALM"
 
-        if states["thumb"] and not states["index"] and not states["middle"] and not states["ring"] and not states["pinky"]:
-            return "THUMBS UP / SIDE"
-
-        if not states["thumb"] and states["index"] and not states["middle"] and not states["ring"] and not states["pinky"]:
+        if states["index"] and not states["middle"] and not states["ring"] and not states["pinky"]:
             return "POINTING"
 
-        if not states["thumb"] and states["index"] and states["middle"] and not states["ring"] and not states["pinky"]:
+        if states["index"] and states["middle"] and not states["ring"] and not states["pinky"]:
             return "PEACE"
 
         thumb_tip = landmarks[self.FINGER_TIPS["thumb"]]
@@ -106,7 +109,13 @@ class HandGestureRecognizer:
 
                 states = self._finger_states(hand_landmarks, handedness)
                 gesture = self._detect_gesture(states, hand_landmarks)
-                recognized.append(HandState(label=gesture, finger_states=states, handedness=handedness))
+                key = f"{handedness}:{i}"
+                history = self.label_history.setdefault(key, deque(maxlen=8))
+                history.append(gesture)
+                counts = Counter(x for x in history if x != "UNKNOWN")
+                stable_gesture = counts.most_common(1)[0][0] if counts else gesture
+
+                recognized.append(HandState(label=stable_gesture, finger_states=states, handedness=handedness))
 
                 h, w, _ = frame_bgr.shape
                 for lm in hand_landmarks:
@@ -118,7 +127,7 @@ class HandGestureRecognizer:
                 y_px = int(wrist.y * h) - 20
                 cv2.putText(
                     frame_bgr,
-                    f"{handedness}: {gesture}",
+                    f"{handedness}: {stable_gesture}",
                     (x_px, max(30, y_px)),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.8,

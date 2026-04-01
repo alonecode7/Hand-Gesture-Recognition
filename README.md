@@ -1,10 +1,14 @@
 # Real-Time Hand Gesture Recognition (MediaPipe)
 
-This project contains a Python app that performs **real-time hand gesture recognition** from your webcam using **MediaPipe Hands** and OpenCV.
+This project contains a Python app that performs **real-time hand gesture recognition** from your webcam using **MediaPipe Tasks (HandLandmarker)** and OpenCV.
+
+## Python and dependency compatibility
+- Designed for newer Python runtimes (including Python 3.14 environments where `mp.solutions` may be unavailable).
+- Uses MediaPipe Tasks API instead of the older Solutions API.
 
 ## Features
 - Detects up to 2 hands in real time.
-- Draws hand landmarks and hand connections.
+- Draws hand landmarks on each frame.
 - Recognizes simple gestures based on finger states:
   - `FIST`
   - `OPEN PALM`
